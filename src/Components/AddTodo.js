@@ -1,6 +1,7 @@
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
+import { toast } from "react-toastify";
 
 function AddTodo({ setTodos, handleClose, editingTodo }) {
   const [todo, setTodo] = useState({ title: "", completed: false });
@@ -40,6 +41,7 @@ function AddTodo({ setTodos, handleClose, editingTodo }) {
               : item
           )
         );
+        toast.success("Task updated successfully!");
       } else {
         const response = await axios.post(
           "https://jsonplaceholder.typicode.com/todos",
@@ -54,10 +56,12 @@ function AddTodo({ setTodos, handleClose, editingTodo }) {
           completed: todo.completed,
         };
         setTodos((prev) => [...prev, newTodo]);
+        toast.success("New task added!");
       }
       setTodo({ task: "", completed: false });
       handleClose();
     } catch (err) {
+      toast.error("Error adding task!");
       console.log("Error adding todo:", err);
     }
   };

@@ -3,11 +3,17 @@ import Table from "react-bootstrap/Table";
 import { useState } from "react";
 import ModalView from "./ModalView";
 import axios from "axios";
+import PaginationComponent from "./PaginationComponent";
+import FilterComponent from "./FilterComponent";
+import { toast } from "react-toastify";
 
 function TodosList() {
   const [show, setShow] = useState(false);
   const [todos, setTodos] = useState([]);
+  const [searchItem, setSearchItem] = useState("");
   const [editingTodo, setEditingTodo] = useState(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const tasksPerPage = 10;
 
   const handleClose = () => {
     setShow(false);
@@ -29,19 +35,49 @@ function TodosList() {
       await axios.delete(
         `https://jsonplaceholder.typicode.com/todos/${todo.id}`
       );
-      setTodos((prevTodos) => prevTodos.filter((item) => item.id !== todo.id)); 
+      setTodos((prevTodos) => prevTodos.filter((item) => item.id !== todo.id));
+      toast.success("Task deleted successfully!")
     } catch (error) {
-      console.error("Error deleting todo:", error);
+      toast.error("Error deleting task.");
     }
   };
+
+  const handleToggleStatus=async(id,currentStatus)=>{
+    try{
+      await axios.put(`https://jsonplaceholder.typicode.com/todos/${id}`,{
+        completed:!currentStatus
+      })
+      setTodos(todos.map(item=>item.id===id?{...item,completed:!currentStatus}:item))
+    }catch(err){
+      console.error("Error toggling status",err)
+    }
+  }
   const handleEdit = (todo) => {
     setEditingTodo(todo);
     handleShow();
   };
+  const filteredTodos = searchItem
+    ? todos.filter((item) =>
+        item.title.toLowerCase().includes(searchItem.toLowerCase())
+      )
+    : todos;
+
+  const offset = currentPage * tasksPerPage;
+  const currentTasks = filteredTodos.slice(offset, offset + tasksPerPage);
+  const pageCount = Math.ceil(filteredTodos.length / tasksPerPage);
+
+  const handlePageClick = (data) => {
+    setCurrentPage(data.selected);
+  };
+
   return (
     <div>
       <h1 className="text-center mb-4">Todo List</h1>
-      <div className="text-end mb-3">
+      <div className="d-flex mb-3 gap-5 justify-content-end">
+        <FilterComponent
+          searchItem={searchItem}
+          setSearchItem={setSearchItem}
+        />
         <button className="btn btn-primary px-4" onClick={handleShow}>
           Add
         </button>
@@ -56,11 +92,19 @@ function TodosList() {
           </tr>
         </thead>
         <tbody>
-          {todos &&
-            todos.map((todo, index) => (
+          {currentTasks &&
+            currentTasks.map((todo, index) => (
               <tr key={index}>
                 <td>{todo.id}</td>
-                <td>{todo.title}</td>
+                <td
+                  onClick={() => handleToggleStatus(todo.id, todo.completed)}
+                  style={{
+                    textDecoration: todo.completed ? "line-through" : "none",
+                    cursor: "pointer",
+                  }}
+                >
+                  {todo.title}
+                </td>
                 <td>{todo.completed ? "Completed" : "Pending"}</td>
                 <td>
                   <button
@@ -80,6 +124,13 @@ function TodosList() {
             ))}
         </tbody>
       </Table>
+      {filteredTodos.length > tasksPerPage && (
+        <PaginationComponent
+          pageCount={pageCount}
+          handlePageClick={handlePageClick}
+        />
+      )}
+
       <ModalView
         handleClose={handleClose}
         show={show}
